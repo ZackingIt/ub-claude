@@ -20,9 +20,10 @@ One Claude Code session, Robert C. Martin's [`ub-mode`](https://github.com/uncle
 ## Install
 
 1. Copy `.claude/`, `CLAUDE.md`, and `docs/` into your repo. Run `chmod +x .claude/hooks/*.sh`. The hooks need `jq`.
-2. Add ub-mode to the repo and commit it, so everyone on the team runs the same version:
+2. ub-mode is already included at `.claude/skills/ub-mode/` (Robert C. Martin's skill, MIT license alongside it),
+   so `/ub-mode` works for everyone who clones the repo, including cloud sessions. To update it to Martin's latest version:
    ```bash
-   mkdir -p .claude/skills/ub-mode && curl -fsSL https://raw.githubusercontent.com/unclebob/ub-mode/master/SKILL.md -o .claude/skills/ub-mode/SKILL.md
+   curl -fsSL https://raw.githubusercontent.com/unclebob/ub-mode/master/SKILL.md -o .claude/skills/ub-mode/SKILL.md
    ```
 3. Install the three tools ub-mode tells Claude to run. The skill only says to use them; it can't measure anything itself:
    [crapper](https://github.com/unclebob/crapper) (complexity × coverage, keep under 10),
