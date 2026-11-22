@@ -1,47 +1,70 @@
-# Uncle Bob–style workflow for Claude Code (ub-mode only)
+# ub-claude
 
-One Claude Code session, Robert C. Martin's [`ub-mode`](https://github.com/unclebob/ub-mode) skill, and his three measuring tools. No specialist agents.
+A Claude Code setup for building software the way Robert C. Martin describes: his
+[`ub-mode`](https://github.com/unclebob/ub-mode) skill, his three measuring tools, and two hooks that enforce the checks.
+One Claude session per story, no specialist agents.
 
 **You own intent (the acceptance spec). Claude does the work with ub-mode. Tools and hooks decide when it's done.**
 
-## What's here
+This repo is the master copy. You don't build software in it: `install.sh` copies it into each project repo,
+and running it again later updates that project.
 
-| File | What it does |
+## Kit files and project files
+
+| Owned by the kit: replaced on every install | Owned by the project: created once, then yours |
 |---|---|
-| `CLAUDE.md` | Project rules and commands. Claude reads it at the start of every session. |
-| `.claude/skills/spec/` | `/spec US-NN`: turn one story into a Gherkin spec for you to approve |
-| `.claude/skills/build/` | `/build US-NN`: build an approved story, using each part of ub-mode at the right moment |
-| `.claude/skills/fix/` | `/fix <bug>`: fix a bug with ub-mode's root-cause rules |
-| `.claude/hooks/guard-spec.sh` | Blocks Claude from editing a spec you've committed |
-| `.claude/hooks/gate.sh` | Blocks Claude from finishing while `make check` fails |
-| `docs/` | `design.md` (rules and numbers), `glossary.md` (domain terms), `user-stories/` (backlog) |
-| `later/agents/` | Specialist agents (hardener, architect, qa), **inactive**. Move one into `.claude/agents/` only if you hit the problem it solves. |
+| `.claude/skills/ub-mode/`: Martin's skill (MIT) | `CLAUDE.md`: stack, commands, tool paths, push rule |
+| `.claude/skills/spec/`: `/spec US-NN` turns one story into a Gherkin spec for you to approve | `Makefile`: the `make check` quality gate |
+| `.claude/skills/build/`: `/build US-NN` builds an approved story with ub-mode | `docs/design.md`: rules, numbers, non-goals, big decisions |
+| `.claude/skills/fix/`: `/fix <bug>` fixes a bug from its root cause | `docs/glossary.md`: domain terms |
+| `.claude/rules/ub-process.md`: the general rules, loaded every session | `docs/user-stories/US-NN-*.md`, `features/`, `qa/`, your code and tests |
+| `.claude/hooks/guard-spec.sh`: blocks Claude from editing a spec you've committed | `.claude/settings.json`: yours; install adds the kit's two hooks to it |
+| `.claude/hooks/gate.sh`: blocks Claude from finishing while `make check` fails | |
+| `docs/user-stories/README.md`: how to write a story | |
 
-## Install
+The starting versions of the project files are in `templates/`.
+To change how you work in every project, edit the kit and reinstall. Don't edit kit-owned files inside a project: the next install overwrites them.
 
-1. Copy `.claude/`, `CLAUDE.md`, and `docs/` into your repo. Run `chmod +x .claude/hooks/*.sh`. The hooks need `jq`.
-2. ub-mode is already included at `.claude/skills/ub-mode/` (Robert C. Martin's skill, MIT license alongside it),
-   so `/ub-mode` works for everyone who clones the repo, including cloud sessions. To update it to Martin's latest version:
+`later/agents/` holds optional specialist agents (hardener, architect, qa). install.sh doesn't copy them.
+Add one to a project's `.claude/agents/` only if you hit the problem it solves.
+
+## Set up a project
+
+1. Clone this repo next to your project. (In a Claude Code cloud session, attach both repos to the session and ask Claude to run step 2.)
+2. Run the installer against the project. It needs `git` and `jq`:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/unclebob/ub-mode/master/SKILL.md -o .claude/skills/ub-mode/SKILL.md
+   ./install.sh /path/to/your-project
    ```
 3. Install the three tools ub-mode tells Claude to run. The skill only says to use them; it can't measure anything itself:
    [crapper](https://github.com/unclebob/crapper) (complexity × coverage, keep under 10),
    [dryer](https://github.com/unclebob/dryer) (duplication), and
    [mutator](https://github.com/unclebob/mutator) (mutation testing).
    They support Clojure, Java, Go, TypeScript, Rust, and Python, and need Python to run. Clone `crapper` next to `mutator`.
-4. Fill in the `TODO`s in `CLAUDE.md`, add a `make check` target, and set `CODE_DIRS` in `gate.sh` to your source and test folders.
+4. Fill in the `TODO`s in the project's `CLAUDE.md` and its `make check` target.
+   Until `make check` is real, the gate blocks Claude from finishing any code change, so set it up first.
+   A good first story does exactly that: project layout, test pipeline, and the gate.
+5. Commit the installed files in the project.
 
-## Three ways to use ub-mode
+## Update a project
+
+When you improve the kit, run `./install.sh /path/to/your-project` again, review with `git diff` in the project, and commit.
+Your project files aren't touched. If the kit stops shipping a file, delete it from the project by hand.
+
+To move ub-mode to Martin's latest version, update it here in the kit, then reinstall:
+```bash
+curl -fsSL https://raw.githubusercontent.com/unclebob/ub-mode/master/SKILL.md -o .claude/skills/ub-mode/SKILL.md
+```
+
+## Using it
 
 | Work | Type | What happens |
 |---|---|---|
-| A small change | `/ub-mode add a --dry-run flag to export` | ub-mode's rules apply to that one change |
+| A small change | `/ub-mode add a --dry-run flag to export` | ub-mode's rules apply to that change |
 | A story | `/spec US-03`, review and commit, then `/build US-03` | Plan → test-first slices → mutation pass → log |
 | A bug | `/fix totals are wrong when the cart is empty` | Reproduce with a failing test → fix the cause → check |
 
-Start a fresh session for each story. Long sessions get summarized, and the skill's rules can drop out of view.
-`CLAUDE.md` repeats the quality bars because it's always loaded.
+Start a fresh session for each story. The rules in `.claude/rules/ub-process.md` load in every session,
+so the core quality bars hold even when you haven't typed `/ub-mode`.
 
 ## Which part of ub-mode applies when
 
@@ -61,5 +84,7 @@ ub-mode is one flat checklist that says "every change: make it work, make it rig
 ## Notes
 - One feature file per story, so a new story never needs to edit an approved spec.
 - To change an approved spec, edit it yourself. Only a human changes the contract.
+- The gate only runs for code changes. Edits to `docs/`, `.claude/`, Markdown files and `.feature` files don't trigger it,
+  so Claude can write a spec and stop to wait for your approval.
 - The guard blocks Claude's Edit and Write tools, not a shell command that rewrites the file. It's a guardrail, not a sandbox.
 - If Claude keeps skipping steps, the next move is a script that runs each stage with `claude -p`, not more agents.
